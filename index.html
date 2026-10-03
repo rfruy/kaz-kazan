@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kazı Kazan</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1e293b 40%, #0f766e);
+      color: #f8fafc;
+    }
+
+    .game {
+      width: min(92vw, 780px);
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      text-align: center;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: #facc15;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #cbd5e1;
+      margin-bottom: 22px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .stat {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 16px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-label {
+      display: block;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      font-weight: bold;
+      color: #f8fafc;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .mine-btn {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      min-width: 190px;
+    }
+
+    .restart-btn {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: white;
+      min-width: 190px;
+      margin-top: 10px;
+    }
+
+    .bankruptcy-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      place-items: center;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(4px);
+      padding: 20px;
+    }
+
+    .bankruptcy-screen.visible {
+      display: grid;
+    }
+
+    .bankruptcy-card {
+      width: min(92vw, 440px);
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      color: #111827;
+      border: 4px solid #ef4444;
+      border-radius: 20px;
+      text-align: center;
+      padding: 28px 22px;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    .bankruptcy-badge {
+      font-size: 3rem;
+      margin-bottom: 8px;
+    }
+
+    .bankruptcy-card h2 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 5vw, 2.6rem);
+      color: #991b1b;
+    }
+
+    .bankruptcy-card p {
+      margin: 0;
+      line-height: 1.6;
+      color: #374151;
+      font-size: 1.02rem;
+    }
+
+    .message {
+      min-height: 80px;
+      border-radius: 16px;
+      background: rgba(15, 118, 110, 0.15);
+      border: 1px solid rgba(45, 212, 191, 0.35);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      margin-bottom: 18px;
+      font-size: 1.05rem;
+      line-height: 1.5;
+    }
+
+    .log {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .log h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: #facc15;
+    }
+
+    .log ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .log li {
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #e2e8f0;
+      font-size: 0.94rem;
+    }
+
+    .mine-zone {
+      --mine-width: 440px;
+      --mine-height: 200px;
+      position: relative;
+      width: min(100%, var(--mine-width));
+      margin: 6px auto 18px;
+      border: 2px dashed rgba(250, 204, 21, 0.7);
+      border-radius: 16px;
+      min-height: 200px;
+      height: var(--mine-height);
+      background: rgba(250, 204, 21, 0.08);
+      color: #fef3c7;
+      font-weight: bold;
+      cursor: crosshair;
+      overflow: hidden;
+      transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .mine-zone:hover {
+      transform: translateY(-1px);
+      border-color: rgba(250, 204, 21, 1);
+      background: rgba(250, 204, 21, 0.12);
+    }
+
+    .mine-zone canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 2;
+      touch-action: none;
+    }
+
+    .scratch-content {
+      position: relative;
+      z-index: 1;
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      padding: 18px 14px;
+      text-align: center;
+      pointer-events: none;
+      font-size: 0.96rem;
+      line-height: 1.4;
+    }
+
+    .shop {
+      margin: 18px 0;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 16px;
+    }
+
+    .shop h3 {
+      margin: 0 0 12px;
+      color: #facc15;
+      font-size: 1rem;
+    }
+
+    .shop-tabs, .ticket-options { display: grid; gap: 8px; }
+    .shop-tabs { grid-template-columns: 1fr 1fr; margin-bottom: 12px; }
+    .shop-tab, .ticket-choice {
+      padding: 9px 10px;
+      font-size: 0.8rem;
+      color: #49321f;
+      background: #d7c29a;
+    }
+    .shop-tab.active, .ticket-choice.active { background: #b98139; color: #fff7e5; }
+    .shop-panel[hidden] { display: none; }
+    .ticket-choice { text-align: left; text-transform: none; letter-spacing: 0; }
+    .ticket-choice strong, .ticket-choice small { display: block; }
+    .ticket-choice strong { display: flex; align-items: center; gap: 8px; }
+    .ticket-icon { width: 24px; height: 24px; object-fit: contain; flex: 0 0 24px; }
+    .ticket-choice small { margin-top: 4px; }
+
+    .shop-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .shop-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .shop-item strong {
+      display: block;
+      margin-bottom: 2px;
+      color: #f8fafc;
+    }
+
+    .shop-item small {
+      color: #cbd5e1;
+    }
+
+    .buy-btn {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: #111827;
+      min-width: 130px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+    }
+
+    .buy-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .odds {
+      margin-top: 18px;
+      font-size: 0.92rem;
+      color: #cbd5e1;
+      text-align: center;
+    }
+
+    .odds strong {
+      color: #f8fafc;
+    }
+
+    .odds-grid {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+
+    .odds-item {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
+      color: #e2e8f0;
+    }
+
+    .odds-item span {
+      display: block;
+      color: #facc15;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .odds-value {
+      font-weight: bold;
+      color: #f8fafc;
+    }
+
+    .reward-icon {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+      vertical-align: middle;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
+    }
+
+    .odds-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 92px;
+      gap: 6px;
+      padding: 10px 8px;
+    }
+
+    .odds-item .reward-icon {
+      display: block;
+      margin: 0 auto 2px;
+    }
+
+    .odds-item span {
+      display: block;
+      text-align: center;
+      width: 100%;
+      line-height: 1.2;
+    }
+
+    .log .reward-icon {
+      width: 26px;
+      height: 26px;
+      margin: 0 4px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 600px) {
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .game {
+        padding: 20px 16px;
+      }
+    }
+
+    /* Warm, paper-and-brass styling for a vintage scratch-ticket shop. */
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #3d2b1f;
+      background-color: #38271d;
+      background-image:
+        radial-gradient(ellipse at 50% 15%, rgba(173, 126, 71, 0.24), transparent 55%),
+        repeating-linear-gradient(90deg, rgba(24, 14, 8, 0.14) 0 2px, transparent 2px 9px),
+        linear-gradient(135deg, #58402c, #251a14 75%);
+      padding: 28px 0;
+    }
+
+    .game {
+      background: #e8d7b5;
+      border: 8px double #79522e;
+      border-radius: 3px;
+      padding: 28px;
+      box-shadow: 0 12px 0 #21160f, 0 24px 48px rgba(0, 0, 0, 0.55), inset 0 0 35px rgba(120, 77, 37, 0.16);
+    }
+
+    h1 {
+      color: #8b351f;
+      font-family: Georgia, 'Times New Roman', serif;
+      text-shadow: 1px 2px 0 #cba66a;
+      letter-spacing: 1px;
+    }
+
+    .subtitle { color: #674a31; }
+
+    .stat, .log, .shop, .message {
+      border: 2px solid #9a7043;
+      border-radius: 2px;
+      box-shadow: inset 0 0 12px rgba(107, 70, 36, 0.12);
+    }
+
+    .stat, .log, .shop { background: #d7c29a; }
+    .stat-label, .shop-item small { color: #705238; }
+    .stat-value, .shop-item strong { color: #432d1c; }
+    .stat-value { font-family: Georgia, 'Times New Roman', serif; }
+
+    button {
+      border: 2px solid #6b421f;
+      border-radius: 2px;
+      box-shadow: 0 3px 0 #4b2c16;
+      font-family: Georgia, 'Times New Roman', serif;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    button:hover { filter: brightness(1.08); }
+    button:active { box-shadow: 0 1px 0 #4b2c16; }
+
+    .mine-btn {
+      color: #fff2d2;
+      background: linear-gradient(#a8472d, #762b1c);
+    }
+
+    .message {
+      color: #49321f;
+      background: #efe2c5;
+      border-color: #a47b4e;
+    }
+
+    .log h3, .shop h3 { color: #843b24; }
+    .log li, .shop-item, .odds-item {
+      color: #49321f;
+      background: #eee1c5;
+      border: 1px solid #b08b5d;
+      border-radius: 2px;
+    }
+
+    .mine-zone {
+      border: 3px solid #9a6a37;
+      border-radius: 2px;
+      background: #d4bb83;
+      color: #57391d;
+      box-shadow: inset 0 0 0 5px rgba(255, 241, 205, 0.35);
+    }
+
+    .mine-zone:hover { background: #dcc895; }
+    .buy-btn { color: #fff1ce; background: linear-gradient(#9b6c2e, #70451f); }
+    .odds { color: #674a31; }
+    .odds strong, .odds-item span { color: #843b24; }
+    .odds, .odds strong, .odds-item, .odds-item span, .odds-value { color: #000; }
+
+    .jackpot-burst {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .jackpot-burst span {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 12px;
+      height: 18px;
+      background: var(--confetti-color);
+      animation: jackpot-explode 1.8s ease-out forwards;
+    }
+
+    @keyframes jackpot-explode {
+      from { transform: translate(-50%, -50%) scale(0.4) rotate(0); opacity: 1; }
+      to {
+        transform: translate(calc(-50% + var(--burst-x)), calc(-50% + var(--burst-y))) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 14px 0; }
+    }
+
+    /* Use the full viewport: shop and history on the left, ticket in the
+       center, and odds on the right. */
+    body {
+      min-height: 100vh;
+      padding: 20px;
+      display: block;
+    }
+
+    .game {
+      width: 100%;
+      min-height: calc(100vh - 40px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(240px, 0.9fr) minmax(400px, 1.5fr) minmax(240px, 0.9fr);
+      grid-template-rows: auto auto auto auto auto auto;
+      grid-template-areas:
+        "title title title"
+        "subtitle subtitle subtitle"
+        "stats stats stats"
+        "shop controls odds"
+        "shop ticket odds"
+        "shop message odds"
+        "log log odds";
+      gap: 16px 22px;
+      align-content: stretch;
+    }
+
+    .game > h1 { grid-area: title; }
+    .game > .subtitle { grid-area: subtitle; margin: 0; }
+    .game > .stats { grid-area: stats; margin: 0; }
+    .game > .controls { grid-area: controls; margin: 0; align-self: end; }
+    .game > .mine-zone {
+      grid-area: ticket;
+      --mine-width: 100%;
+      --mine-height: clamp(240px, 34vh, 420px);
+      width: 100%;
+      margin: 0;
+      align-self: stretch;
+    }
+    .game > .message { grid-area: message; margin: 0; }
+    .game > .shop { grid-area: shop; margin: 0; align-self: stretch; }
+    .game > .log { grid-area: log; align-self: end; }
+    .game > .odds { grid-area: odds; margin: 0; text-align: left; align-self: stretch; }
+
+    @media (max-width: 900px) {
+      .game {
+        grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
+        grid-template-areas:
+          "title title"
+          "subtitle subtitle"
+          "stats stats"
+          "shop controls"
+          "shop ticket"
+          "log message"
+          "odds odds";
+      }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .game {
+        min-height: calc(100vh - 24px);
+        padding: 18px 14px;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+          "title"
+          "subtitle"
+          "stats"
+          "controls"
+          "ticket"
+          "message"
+          "shop"
+          "odds"
+          "log";
+        gap: 14px;
+      }
+      .game > .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .game > .stat { padding: 10px 6px; }
+      .game > .shop, .game > .log, .game > .odds { width: 100%; }
+      .game > .shop-item { flex-wrap: wrap; }
+      .game > .buy-btn { min-width: 110px; }
+      .game > .odds { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div id="bankruptcyScreen" class="bankruptcy-screen" aria-live="assertive">
+    <div class="bankruptcy-card">
+      <div class="bankruptcy-badge">⚠️</div>
+      <h2>İFLAS</h2>
+      <p>Bakiye 50 coin'un altına düştü ve açık biletin kalmadı. Oyunu yeniden başlatmalısın.</p>
+      <button id="restartBtn" type="button" class="restart-btn">Yeniden başla</button>
+    </div>
+  </div>
+
+  <div class="game">
+    <h1>💰 Kazı Kazan</h1>
+    <div class="subtitle">Biletini kazı, alanın %80'ini aç ve ödülünü al!</div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Bakiye</span>
+        <span id="balance" class="stat-value">200</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Kazı Sayısı</span>
+        <span id="digs" class="stat-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">En Büyük Ödül</span>
+        <span id="best" class="stat-value">0</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="ticketBtn" class="mine-btn">🎟️ Yeni bir bilet al</button>
+    </div>
+
+    <div id="mineZone" class="mine-zone" aria-label="Kazı alanı">
+      <canvas id="scratchCanvas" aria-hidden="true"></canvas>
+      <div class="scratch-content">Yeni bir bilet alarak başlayın.</div>
+    </div>
+
+    <div id="message" class="message" role="status" aria-live="polite">
+      Yeni bir bilet almaya hazırsın! 🎉
+    </div>
+
+    <div class="shop">
+      <h3>Mağaza</h3>
+      <div class="shop-tabs" role="tablist" aria-label="Mağaza bölümleri">
+        <button type="button" class="shop-tab active" data-shop-tab="items" role="tab" aria-selected="true">Geliştirmeler</button>
+        <button type="button" class="shop-tab" data-shop-tab="tickets" role="tab" aria-selected="false">Bilet türleri</button>
+      </div>
+      <div class="shop-panel" data-shop-panel="items">
+      <div class="shop-list">
+        <div class="shop-item">
+          <div>
+            <strong>Mini Kazma</strong>
+            <small>Her kazıda +25 coin</small>
+          </div>
+          <button type="button" class="buy-btn" data-buy="drill">Satın al</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>Şans Tılsımı</strong>
+            <small>Tüm ödüllerin şansı +2 puan</small>
+          </div>
+          <button type="button" class="buy-btn" data-buy="charm">Satın al</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>Maden Çantası</strong>
+            <small>Ödüller +10%</small>
+          </div>
+          <button type="button" class="buy-btn" data-buy="pouch">Satın al</button>
+        </div>
+        <div class="shop-item">
+          <div>
+            <strong>Kazı Alanı Genişletici</strong>
+            <small>Alanı büyütür, daha rahat kazı yaparsın</small>
+          </div>
+          <button type="button" class="buy-btn" data-buy="scratchSize">Satın al</button>
+        </div>
+      </div>
+      </div>
+      <div class="shop-panel" data-shop-panel="tickets" hidden>
+        <div class="ticket-options">
+          <button type="button" class="ticket-choice active" data-ticket-type="classic"><strong>Klasik Bilet — 50 coin</strong><small>%80 kazı • Standart şans</small></button>
+          <button type="button" class="ticket-choice" data-ticket-type="silver"><strong><img class="ticket-icon" src="money.png" alt="" />Gümüş Bilet — 150 coin</strong><small>%88 kazı • Daha iyi ödül şansı</small></button>
+          <button type="button" class="ticket-choice" data-ticket-type="gold"><strong><img class="ticket-icon" src="gold.png" alt="" />Altın Bilet — 300 coin</strong><small>%93 kazı • En iyi ödül şansı</small></button>
+          <button type="button" class="ticket-choice" data-ticket-type="diamond"><strong><img class="ticket-icon" src="diamond.png" alt="" />Elmas Bilet — 600 coin</strong><small>%96 kazı • Çok yüksek ödül şansı</small></button>
+          <button type="button" class="ticket-choice" data-ticket-type="legendary"><strong><img class="ticket-icon" src="jackpot.png" alt="" />Efsanevi Bilet — 1200 coin</strong><small>%98 kazı • En yüksek ödül şansı</small></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="log">
+      <h3>Son Kazılar</h3>
+      <ul id="logList">
+        <li>Oyun başlatıldı. Hazır mısın?</li>
+      </ul>
+    </div>
+
+    <div class="odds">
+      <strong>Olasılık:</strong>
+      <div class="odds-grid" id="oddsGrid">
+        <div class="odds-item" data-odds-index="0">
+          <span>Hiçbir şey</span>
+          <div class="odds-value">35.0%</div>
+        </div>
+        <div class="odds-item" data-odds-index="1">
+          <img class="reward-icon" src="money.png" alt="Küçük ödül" />
+          <div class="odds-value">28.0%</div>
+        </div>
+        <div class="odds-item" data-odds-index="2">
+          <img class="reward-icon" src="dolar.png" alt="Orta ödül" />
+          <div class="odds-value">20.0%</div>
+        </div>
+        <div class="odds-item" data-odds-index="3">
+          <img class="reward-icon" src="gold.png" alt="Büyük ödül" />
+          <div class="odds-value">12.0%</div>
+        </div>
+        <div class="odds-item" data-odds-index="4">
+          <img class="reward-icon" src="diamond.png" alt="Nadir ödül" />
+          <div class="odds-value">4.0%</div>
+        </div>
+        <div class="odds-item" data-odds-index="5">
+          <img class="reward-icon" src="jackpot.png" alt="JACKPOT" />
+          <div class="odds-value">1.0%</div>
+        </div>
+      </div>
+      <br />
+      Bu oyun tamamen eğlence amaçlıdır. Gerçek para kazanmaz veya yatırım önermez.
+    </div>
+  </div>
+
+  <script>
+    const balanceEl = document.getElementById('balance');
+    const digsEl = document.getElementById('digs');
+    const bestEl = document.getElementById('best');
+    const messageEl = document.getElementById('message');
+    const logListEl = document.getElementById('logList');
+    const ticketBtn = document.getElementById('ticketBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const bankruptcyScreen = document.getElementById('bankruptcyScreen');
+    const mineZone = document.getElementById('mineZone');
+    const scratchCanvas = document.getElementById('scratchCanvas');
+    const scratchCtx = scratchCanvas.getContext('2d');
+    const shopButtons = document.querySelectorAll('.buy-btn');
+    const ticketTypes = {
+      classic: { name: 'Klasik Bilet', cost: 50, scratchPercent: 80, brushWidth: 42, luck: 1 },
+      silver: { name: 'Gümüş Bilet', cost: 150, scratchPercent: 88, brushWidth: 30, luck: 1.8 },
+      gold: { name: 'Altın Bilet', cost: 300, scratchPercent: 93, brushWidth: 22, luck: 3.2 },
+      diamond: { name: 'Elmas Bilet', cost: 600, scratchPercent: 96, brushWidth: 18, luck: 5.5 },
+      legendary: { name: 'Efsanevi Bilet', cost: 1200, scratchPercent: 98, brushWidth: 14, luck: 9 },
+    };
+    let selectedTicketType = 'classic';
+    let currentScratchPercent = 80;
+
+    const state = {
+      balance: 200,
+      digs: 0,
+      best: 0,
+      bonus: 0,
+      chanceBoost: 0,
+      rewardBoost: 0,
+      shop: {
+        drill: 0,
+        charm: 0,
+        pouch: 0,
+        scratchSize: 0,
+      },
+    };
+
+    const rewards = [
+      { label: 'Hiçbir şey', chance: 35, value: 0 },
+      { label: 'Küçük ödül', icon: 'money.png', chance: 28, value: 25 },
+      { label: 'Orta ödül', icon: 'dolar.png', chance: 20, value: 75 },
+      { label: 'Büyük ödül', icon: 'gold.png', chance: 12, value: 180 },
+      { label: 'Nadir ödül', icon: 'diamond.png', chance: 4, value: 500 },
+      { label: 'JACKPOT', icon: 'jackpot.png', chance: 1, value: 1500 },
+    ];
+
+    function getCurrentRewardChances() {
+      const charmLevel = state.shop.charm;
+      const pouchLevel = state.shop.pouch;
+      const ticketLuck = ticketTypes[selectedTicketType].luck;
+
+      const adjustedRewards = [
+        { ...rewards[0], chance: Math.max(5, rewards[0].chance / ticketLuck - charmLevel * 10 - pouchLevel * 1.5) },
+        { ...rewards[1], chance: Math.max(10, rewards[1].chance + pouchLevel * 3 + charmLevel * 2) },
+        { ...rewards[2], chance: Math.max(10, rewards[2].chance * ticketLuck ** 1.2 + pouchLevel * 3 + charmLevel * 2) },
+        { ...rewards[3], chance: Math.max(8, rewards[3].chance * ticketLuck ** 1.5 + pouchLevel * 2 + charmLevel * 2) },
+        { ...rewards[4], chance: Math.max(3, rewards[4].chance * ticketLuck ** 2 + pouchLevel * 1.5 + charmLevel * 2) },
+        { ...rewards[5], chance: Math.max(1, rewards[5].chance * ticketLuck ** 2.5 + charmLevel * 2) },
+      ];
+
+      const totalChance = adjustedRewards.reduce((total, reward) => total + reward.chance, 0) || 1;
+      return adjustedRewards.map((reward) => ({
+        ...reward,
+        chance: (reward.chance / totalChance) * 100,
+      }));
+    }
+
+    function updateOddsDisplay() {
+      const currentRewards = getCurrentRewardChances();
+      const oddsItems = document.querySelectorAll('.odds-item');
+
+      oddsItems.forEach((item, index) => {
+        const reward = currentRewards[index];
+        if (!reward) return;
+
+        const valueEl = item.querySelector('.odds-value');
+        if (valueEl) {
+          valueEl.textContent = `${reward.chance.toFixed(1)}%`;
+        }
+      });
+    }
+
+    document.querySelectorAll('[data-shop-tab]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('[data-shop-tab]').forEach((item) => {
+          const active = item === tab;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-selected', String(active));
+        });
+        document.querySelectorAll('[data-shop-panel]').forEach((panel) => {
+          panel.hidden = panel.dataset.shopPanel !== tab.dataset.shopTab;
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-ticket-type]').forEach((choice) => {
+      choice.addEventListener('click', () => {
+        selectedTicketType = choice.dataset.ticketType;
+        document.querySelectorAll('[data-ticket-type]').forEach((item) => item.classList.toggle('active', item === choice));
+        updateOddsDisplay();
+        updateBankruptcyState();
+        messageEl.textContent = `${ticketTypes[selectedTicketType].name} seçildi. Bilet almak için düğmeye bas.`;
+      });
+    });
+
+    const shopItems = {
+      drill: { name: 'Mini Kazma', baseCost: 90 },
+      charm: { name: 'Şans Tılsımı', baseCost: 170 },
+      pouch: { name: 'Maden Çantası', baseCost: 280 },
+      scratchSize: { name: 'Kazı Alanı Genişletici', baseCost: 350 },
+    };
+
+    function addLog(text) {
+      const item = document.createElement('li');
+      item.textContent = text;
+      logListEl.prepend(item);
+
+      const items = logListEl.querySelectorAll('li');
+      if (items.length > 6) {
+        items[items.length - 1].remove();
+      }
+    }
+
+    function createRewardIcon(reward) {
+      const icon = document.createElement('img');
+      icon.className = 'reward-icon';
+      icon.src = reward.icon;
+      icon.alt = reward.label;
+      return icon;
+    }
+
+    function addRewardLog(reward, value) {
+      const item = document.createElement('li');
+      item.append(`Kazı ${state.digs}: `);
+      if (reward.icon) item.append(createRewardIcon(reward));
+      else item.append(reward.label);
+      item.append(` - +${value} coin`);
+      logListEl.prepend(item);
+
+      const items = logListEl.querySelectorAll('li');
+      if (items.length > 6) items[items.length - 1].remove();
+    }
+
+    function updateStats() {
+      balanceEl.textContent = state.balance;
+      digsEl.textContent = state.digs;
+      bestEl.textContent = state.best;
+    }
+
+    function updateBankruptcyState() {
+      const bankrupt = state.balance < 50 && !currentScratchReward;
+      bankruptcyScreen.classList.toggle('visible', bankrupt);
+
+      if (bankrupt) {
+        messageEl.textContent = 'İFLAS! Bakiye 50 coin altına düştü. Açık biletin yok. Yeniden başla.';
+        ticketBtn.disabled = true;
+        return;
+      }
+
+      ticketBtn.disabled = !!currentScratchReward;
+      if (!currentScratchReward) {
+        messageEl.textContent = 'Yeni bir bilet almaya hazırsın! 🎉';
+      }
+    }
+
+    function resetGame() {
+      state.balance = 200;
+      state.digs = 0;
+      state.best = 0;
+      state.bonus = 0;
+      state.chanceBoost = 0;
+      state.rewardBoost = 0;
+      state.shop = {
+        drill: 0,
+        charm: 0,
+        pouch: 0,
+        scratchSize: 0,
+      };
+      selectedTicketType = 'classic';
+      document.querySelectorAll('[data-ticket-type]').forEach((item) => item.classList.toggle('active', item.dataset.ticketType === 'classic'));
+
+      currentScratchReward = null;
+      currentScratchValue = 0;
+      scratchRevealed = false;
+      ticketBtn.disabled = false;
+      bankruptcyScreen.classList.remove('visible');
+      scratchCtx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+      scratchCtx.fillStyle = 'rgba(250, 204, 21, 0.92)';
+      scratchCtx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+      scratchCtx.globalCompositeOperation = 'destination-out';
+      scratchContent.textContent = 'Yeni bir bilet alarak başlayın.';
+      messageEl.textContent = 'Oyun sıfırlandı. Yeni bir bilet almaya hazırsın! 🎉';
+      logListEl.innerHTML = '<li>Oyun sıfırlandı. Yeni macera başlıyor.</li>';
+      updateStats();
+      renderShop();
+    }
+
+    function getCost(type) {
+      const base = shopItems[type].baseCost;
+      return Math.round(base * (1 + state.shop[type] * 1.25));
+    }
+
+    function applyScratchSize() {
+      const level = state.shop.scratchSize;
+      const width = 440 + level * 70;
+      const height = 200 + level * 35;
+      mineZone.style.setProperty('--mine-width', `${width}px`);
+      mineZone.style.setProperty('--mine-height', `${height}px`);
+      resizeScratchCanvas();
+    }
+
+    function renderShop() {
+      shopButtons.forEach((button) => {
+        const type = button.dataset.buy;
+        const cost = getCost(type);
+        button.textContent = `${shopItems[type].name} (${cost})`;
+        button.disabled = state.balance < cost;
+      });
+      applyScratchSize();
+      updateOddsDisplay();
+    }
+
+    function buyItem(type) {
+      const cost = getCost(type);
+
+      if (state.balance < cost) {
+        messageEl.innerHTML = `Bu eşyayı almak için yeterli bakiyen yok 😕 <br> ${cost} coin gerekiyor.`;
+        return;
+      }
+
+      state.balance -= cost;
+      state.shop[type] += 1;
+
+      if (type === 'drill') state.bonus += 25;
+      if (type === 'charm') state.chanceBoost += 2;
+      if (type === 'pouch') state.rewardBoost += 10;
+      if (type === 'scratchSize') {
+        const newWidth = 440 + state.shop.scratchSize * 70;
+        const newHeight = 200 + state.shop.scratchSize * 35;
+        messageEl.innerHTML = `${shopItems[type].name} satın alındı! ✅ <br> Kazı alanı ${newWidth}px x ${newHeight}px oldu.`;
+      } else {
+        messageEl.innerHTML = `${shopItems[type].name} satın alındı! ✅ <br> Etki aktif hale geldi.`;
+      }
+
+      updateStats();
+      renderShop();
+      addLog(`${shopItems[type].name} satın alındı - -${cost} coin`);
+    }
+
+    function decideReward() {
+      const currentRewards = getCurrentRewardChances();
+      const random = Math.random() * 100;
+      let total = 0;
+
+      for (const reward of currentRewards) {
+        total += reward.chance;
+        if (random <= total) {
+          return reward;
+        }
+      }
+
+      return currentRewards[0];
+    }
+
+    function mine() {
+      if (currentScratchReward) return;
+      const ticket = ticketTypes[selectedTicketType];
+      if (state.balance < ticket.cost) {
+        messageEl.textContent = `${ticket.name} almak için yeterli bakiyen yok. ${ticket.cost} coin gerekiyor.`;
+        return;
+      }
+
+      if (state.balance < 50 && !currentScratchReward) {
+        updateBankruptcyState();
+        return;
+      }
+
+      state.balance -= ticket.cost;
+      updateStats();
+      renderShop();
+      addLog(`${ticket.name} alındı - -${ticket.cost} coin`);
+
+      const reward = decideReward();
+      currentScratchReward = reward;
+      scratchRevealed = false;
+      currentScratchPercent = ticket.scratchPercent;
+      let value = reward.value;
+
+      if (reward.value > 0) {
+        value += state.bonus;
+        value = Math.round(value * (1 + state.rewardBoost / 100));
+      }
+
+      currentScratchValue = value;
+      ticketBtn.disabled = true;
+
+      resizeScratchCanvas();
+      scratchContent.textContent = `Biletini kazı: ödül için alanın %${currentScratchPercent}'ini aç!`;
+      messageEl.textContent = `${ticket.name} hazır. Ödülünü almak için alanın %${currentScratchPercent}'ini kazı.`;
+    }
+
+    const scratchContent = document.querySelector('.scratch-content');
+    let currentScratchReward = null;
+    let currentScratchValue = 0;
+    let scratchRevealed = false;
+
+    function resizeScratchCanvas() {
+      const rect = mineZone.getBoundingClientRect();
+      scratchCanvas.width = rect.width;
+      scratchCanvas.height = rect.height;
+      scratchCtx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+      if (!scratchRevealed) {
+        scratchCtx.globalCompositeOperation = 'source-over';
+        scratchCtx.fillStyle = 'rgba(250, 204, 21, 0.92)';
+        scratchCtx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+      }
+      scratchCtx.globalCompositeOperation = 'destination-out';
+      scratchCtx.lineWidth = currentScratchReward ? ticketTypes[selectedTicketType].brushWidth : 42;
+      scratchCtx.lineCap = 'round';
+      scratchCtx.lineJoin = 'round';
+      scratchContent.textContent = currentScratchReward
+        ? `Biletini kazı: ödül için alanın %${currentScratchPercent}'ini aç!`
+        : 'Yeni bir bilet alarak başlayın.';
+    }
+
+    function revealScratchReward() {
+      if (!currentScratchReward || ticketBtn.disabled === false) return;
+
+      const reward = currentScratchReward;
+      const rewardValue = currentScratchValue;
+
+      scratchCtx.save();
+      scratchCtx.globalCompositeOperation = 'destination-out';
+      scratchCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+      scratchCtx.fillRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+      scratchCtx.restore();
+      scratchRevealed = true;
+
+      if (reward.value === 0) {
+        scratchContent.textContent = 'Bu turda ödül çıkmadı 😕';
+      } else {
+        scratchContent.replaceChildren(createRewardIcon(reward), document.createTextNode(` • ${rewardValue} coin`));
+      }
+
+      state.balance += rewardValue;
+      state.digs += 1;
+      state.best = Math.max(state.best, rewardValue);
+      updateStats();
+      renderShop();
+
+      currentScratchReward = null;
+      ticketBtn.disabled = false;
+      updateBankruptcyState();
+
+      if (reward.value === 0) {
+        messageEl.textContent = 'Bu bilette ödül çıkmadı 😕 Yeni bir bilet alabilirsin.';
+      } else if (reward.label === 'JACKPOT') {
+        messageEl.replaceChildren(document.createTextNode('WOW! '), createRewardIcon(reward), document.createTextNode(` 🎉 ${rewardValue} coin kazandın!`));
+      } else {
+        messageEl.replaceChildren(createRewardIcon(reward), document.createTextNode(` bulundu! ${rewardValue} coin kazandın.`));
+      }
+      addRewardLog(reward, rewardValue);
+    }
+
+    function getScratchedPercent() {
+      const { data } = scratchCtx.getImageData(0, 0, scratchCanvas.width, scratchCanvas.height);
+      let transparentPixels = 0;
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] < 20) transparentPixels += 1;
+      }
+      return (transparentPixels / (data.length / 4)) * 100;
+    }
+
+    function triggerJackpotAnimation() {
+      const burst = document.createElement('div');
+      burst.className = 'jackpot-burst';
+      burst.setAttribute('aria-hidden', 'true');
+      const colors = ['#facc15', '#ef4444', '#22c55e', '#3b82f6', '#a855f7', '#f97316'];
+
+      for (let i = 0; i < 90; i += 1) {
+        const piece = document.createElement('span');
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 120 + Math.random() * Math.max(window.innerWidth, window.innerHeight) * 0.55;
+        piece.style.setProperty('--burst-x', `${Math.cos(angle) * distance}px`);
+        piece.style.setProperty('--burst-y', `${Math.sin(angle) * distance}px`);
+        piece.style.setProperty('--confetti-color', colors[i % colors.length]);
+        piece.style.animationDelay = `${Math.random() * 0.2}s`;
+        burst.appendChild(piece);
+      }
+
+      document.body.appendChild(burst);
+      window.setTimeout(() => burst.remove(), 2200);
+    }
+
+    function checkScratchCompletion() {
+      if (currentScratchReward && ticketBtn.disabled && getScratchedPercent() >= currentScratchPercent) {
+        revealScratchReward();
+      }
+    }
+
+    let isScratching = false;
+
+    mineZone.addEventListener('pointerdown', (event) => {
+      if (!currentScratchReward || !ticketBtn.disabled) return;
+      isScratching = true;
+      const rect = mineZone.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      scratchCtx.beginPath();
+      scratchCtx.moveTo(x, y);
+      scratchCtx.lineTo(x + 0.01, y + 0.01);
+      scratchCtx.stroke();
+      checkScratchCompletion();
+      event.preventDefault();
+    });
+
+    mineZone.addEventListener('pointermove', (event) => {
+      if (!isScratching) return;
+      const rect = mineZone.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      scratchCtx.lineTo(x, y);
+      scratchCtx.stroke();
+      checkScratchCompletion();
+      event.preventDefault();
+    });
+
+    mineZone.addEventListener('pointerup', () => {
+      isScratching = false;
+    });
+
+    mineZone.addEventListener('pointerleave', () => {
+      isScratching = false;
+    });
+
+    ticketBtn.addEventListener('click', mine);
+    restartBtn.addEventListener('click', resetGame);
+    shopButtons.forEach((button) => {
+      button.addEventListener('click', () => buyItem(button.dataset.buy));
+    });
+
+    window.addEventListener('resize', resizeScratchCanvas);
+
+    updateStats();
+    renderShop();
+    updateBankruptcyState();
+    resizeScratchCanvas();
+  </script>
+</body>
+</html>
+
